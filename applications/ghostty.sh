@@ -35,12 +35,13 @@ font-family = "JetBrains Mono"
 font-size = 12
 
 # Theme
-theme = dark:rose-pine,light:rose-pine-dawn
+theme = dark:Rose Pine,light:Rose Pine Dawn
 
 # Window configuration
 window-padding-x = 8
 window-padding-y = 8
 window-theme = auto
+maximize = true
 
 # macOS-like keybindings
 keybind = super+c=copy_to_clipboard
@@ -49,10 +50,6 @@ keybind = super+t=new_tab
 keybind = super+w=close_surface
 keybind = super+n=new_window
 keybind = super+q=quit
-
-# Tab management
-keybind = super+shift+left_bracket=goto_tab:previous
-keybind = super+shift+right_bracket=goto_tab:next
 
 # Font size adjustment
 keybind = super+plus=increase_font_size:1

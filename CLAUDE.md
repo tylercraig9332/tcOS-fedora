@@ -16,6 +16,7 @@ The repository is organized into various directories, each containing modular ba
 - `setup-flatpak.sh`: Flatpak package installation
 - `setup-appimage.sh`: AppImage support setup
 - `setup-nvim.sh`: Neovim installation with LazyVim starter configuration
+- `setup-tailscale.sh`: Tailscale VPN installation and configuration
 - `shell.sh`: Shell customization (zsh/bash and bat installation)
 
 ### `/gnome` - GNOME Desktop Customization

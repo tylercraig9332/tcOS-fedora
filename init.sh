@@ -6,6 +6,7 @@ bash ./system/update.sh
 bash ./system/shell.sh
 bash ./system/setup-flatpak.sh
 bash ./system/setup-nvim.sh
+bash ./system/setup-tailscale.sh
 bash ./gnome/settings.sh
 
 
