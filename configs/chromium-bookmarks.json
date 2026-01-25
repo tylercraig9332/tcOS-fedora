@@ -1,0 +1,128 @@
+{
+   "checksum": "7a7bd8dd6f068e29f95bb89d03f36b8b",
+   "roots": {
+      "bookmark_bar": {
+         "children": [ {
+            "date_added": "13413775017390107",
+            "date_last_used": "0",
+            "guid": "2074d23e-1396-4736-a29d-084ca8d67b49",
+            "id": "8",
+            "meta_info": {
+               "power_bookmark_meta": ""
+            },
+            "name": "",
+            "type": "url",
+            "url": "https://x.com/home"
+         }, {
+            "date_added": "13413775281926396",
+            "date_last_used": "0",
+            "guid": "1af180d3-e522-4eaf-8601-9c872a118b80",
+            "id": "13",
+            "meta_info": {
+               "power_bookmark_meta": ""
+            },
+            "name": "",
+            "type": "url",
+            "url": "https://www.youtube.com/"
+         }, {
+            "children": [ {
+               "date_added": "13413775067897378",
+               "date_last_used": "13413775090667140",
+               "guid": "0b31767d-3a0f-433b-94a7-aa5b5321ea62",
+               "id": "9",
+               "meta_info": {
+                  "power_bookmark_meta": ""
+               },
+               "name": "tmancraig03",
+               "type": "url",
+               "url": "https://mail.google.com/mail/u/0/#inbox"
+            }, {
+               "date_added": "13413775132771705",
+               "date_last_used": "0",
+               "guid": "1e99b843-d88f-41e8-ad10-ac6a43362adb",
+               "id": "11",
+               "meta_info": {
+                  "power_bookmark_meta": ""
+               },
+               "name": "tylercraig9332",
+               "type": "url",
+               "url": "https://mail.google.com/mail/u/1/#inbox"
+            }, {
+               "date_added": "13413775149372312",
+               "date_last_used": "0",
+               "guid": "86aca64b-4999-498f-a200-0d209be569ce",
+               "id": "12",
+               "meta_info": {
+                  "power_bookmark_meta": ""
+               },
+               "name": "Google Maps",
+               "type": "url",
+               "url": "https://www.google.com/maps"
+            } ],
+            "date_added": "13413775084488877",
+            "date_last_used": "0",
+            "date_modified": "13413775281926396",
+            "guid": "e8154c13-02df-49dc-a48c-b68ffee9184b",
+            "id": "10",
+            "name": "Google",
+            "type": "folder"
+         }, {
+            "children": [ {
+               "date_added": "13000000000000000",
+               "date_last_used": "13413775310750427",
+               "guid": "00000000-0000-0000-0000-000000000001",
+               "id": "5",
+               "name": "GitHub",
+               "type": "url",
+               "url": "https://github.com/"
+            }, {
+               "date_added": "13413775338295606",
+               "date_last_used": "0",
+               "guid": "a07408a4-c05f-4c61-9208-45ecd9896281",
+               "id": "16",
+               "meta_info": {
+                  "power_bookmark_meta": ""
+               },
+               "name": "Trending GitHub",
+               "type": "url",
+               "url": "https://github.com/trending"
+            } ],
+            "date_added": "13413775309016996",
+            "date_last_used": "0",
+            "date_modified": "13413775338295606",
+            "guid": "bcfcc82a-048c-4df1-8988-87fd211bef6c",
+            "id": "14",
+            "name": "Dev",
+            "type": "folder"
+         } ],
+         "date_added": "13000000000000000",
+         "date_last_used": "0",
+         "date_modified": "13413775309017100",
+         "guid": "0bc5d13f-2cba-5d74-951f-3f233fe6c908",
+         "id": "1",
+         "name": "Bookmarks",
+         "type": "folder"
+      },
+      "other": {
+         "children": [  ],
+         "date_added": "13000000000000000",
+         "date_last_used": "0",
+         "date_modified": "0",
+         "guid": "82b081ec-3dd3-529c-8475-ab6c344590dd",
+         "id": "2",
+         "name": "Other bookmarks",
+         "type": "folder"
+      },
+      "synced": {
+         "children": [  ],
+         "date_added": "13000000000000000",
+         "date_last_used": "0",
+         "date_modified": "0",
+         "guid": "4cf2e351-0e85-532b-bb37-df045d8f8d0f",
+         "id": "3",
+         "name": "Mobile bookmarks",
+         "type": "folder"
+      }
+   },
+   "version": 1
+}

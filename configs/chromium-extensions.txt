@@ -1,0 +1,5 @@
+# Chromium Extensions Manifest
+# Format: extension_id | extension_name | chrome_web_store_url
+# Lines starting with # are comments
+
+eiaeiblijfjekdanodkjadfinkhbfgcd | NordPass Password Manager | https://chromewebstore.google.com/detail/nordpass%C2%AE-password-manage/eiaeiblijfjekdanodkjadfinkhbfgcd
