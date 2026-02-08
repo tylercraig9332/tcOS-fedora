@@ -1,72 +1,50 @@
+#!/usr/bin/env bash
 # Install Chromium Browser
 
 set -euo pipefail
 
-echo "========================================"
-echo "     Installing Chromium Browser       "
-echo "        with NordPass Support          "
-echo "========================================"
-echo ""
-
-# ────────────────────────────────────────────────
-# 1. Check if Chromium already installed
-# ────────────────────────────────────────────────
-CHROMIUM_ALREADY_INSTALLED=false
-
-if command -v chromium-browser >/dev/null 2>&1; then
-  echo "→ Chromium already installed: $(chromium-browser --version)"
-  CHROMIUM_ALREADY_INSTALLED=true
-else
-  echo "→ Chromium not found, proceeding with installation..."
-fi
-
-# ────────────────────────────────────────────────
-# 2. Install Chromium (if needed)
-# ────────────────────────────────────────────────
-if [ "$CHROMIUM_ALREADY_INSTALLED" = false ]; then
-  echo ""
-  echo "→ Installing Chromium from Fedora repositories..."
-  sudo dnf install -y chromium
-  echo ""
-  echo "✓ Chromium installed successfully!"
-fi
-
-# ────────────────────────────────────────────────
-# 3. Verify installation
-# ────────────────────────────────────────────────
-echo ""
-echo "→ Verifying Chromium installation..."
-chromium-browser --version
-
-# ────────────────────────────────────────────────
-# 4. Restore profile (bookmarks + extensions)
-# ────────────────────────────────────────────────
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(dirname "$SCRIPT_DIR")"
 
-# Source the generic restoration function
-source "${REPO_ROOT}/lib/restore-chromium-profile.sh"
+# shellcheck source=../lib/package-manager.sh
+source "${REPO_ROOT}/lib/package-manager.sh"
+pm_init
+trap 'pm_print_reboot_summary' EXIT
 
-# Restore Chromium profile
-restore_chromium_profile "$HOME/.config/chromium" "chromium-browser"
-
-# ────────────────────────────────────────────────
-# Final instructions
-# ────────────────────────────────────────────────
-echo ""
 echo "========================================"
-echo " Chromium installed! ✓"
-echo ""
-echo "Next steps for extensions:"
-echo "  1. Chromium should open with extension pages"
-echo "  2. Click 'Add to Chrome' for each extension"
-echo "  3. Confirm by clicking 'Add extension'"
-echo "  4. Sign in to your accounts as needed"
-echo ""
-echo "Bookmarks: Restored from configs/chromium-bookmarks.json"
-echo "Extensions: Listed in configs/chromium-extensions.txt"
-echo ""
-echo "Note: Chromium is the open-source base for Chrome"
-echo "      with full Chrome Web Store extension support"
-echo "Updates: Managed via Fedora DNF updates"
+echo "     Installing Chromium Browser       "
+echo "========================================"
+echo
+
+if command -v chromium-browser >/dev/null 2>&1; then
+  echo "Chromium already installed: $(chromium-browser --version)"
+else
+  pm_install chromium gui
+fi
+
+SCRIPT_LAUNCH_CMD=""
+PROFILE_PATH=""
+
+if command -v chromium-browser >/dev/null 2>&1; then
+  SCRIPT_LAUNCH_CMD="chromium-browser"
+  PROFILE_PATH="$HOME/.config/chromium"
+  chromium-browser --version || true
+elif flatpak info org.chromium.Chromium >/dev/null 2>&1; then
+  SCRIPT_LAUNCH_CMD="flatpak run org.chromium.Chromium"
+  PROFILE_PATH="$HOME/.var/app/org.chromium.Chromium/config/chromium"
+  flatpak info org.chromium.Chromium | grep -E "ID|Version|Branch" || true
+elif [[ "$PM_HOST_KIND" == "atomic" && "$PM_LAST_INSTALL_PENDING_REBOOT" -eq 1 ]]; then
+  echo "Chromium was layered with rpm-ostree and will be available after reboot."
+else
+  echo "Warning: Chromium binary not detected after install attempt."
+fi
+
+if [[ -n "$PROFILE_PATH" ]]; then
+  source "${REPO_ROOT}/lib/restore-chromium-profile.sh"
+  restore_chromium_profile "$PROFILE_PATH" "$SCRIPT_LAUNCH_CMD"
+fi
+
+echo
+echo "========================================"
+echo " Chromium installation complete"
 echo "========================================"

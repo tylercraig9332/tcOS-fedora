@@ -1,22 +1,25 @@
-# Raycast Alternative
+#!/usr/bin/env bash
 # setup-vicinae.sh
 # Builds and installs Vicinae AppImage - A modern application launcher for Linux
-# Run with: bash setup-vicinae.sh or ./setup-vicinae.sh after chmod +x
 
 set -euo pipefail
 
-echo "=== Vicinae AppImage Build and Installation ==="
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(dirname "$SCRIPT_DIR")"
 
-# ────────────────────────────────────────────────────────────────────────────────
-# 1. Check if Vicinae is already installed
-# ────────────────────────────────────────────────────────────────────────────────
+# shellcheck source=../lib/package-manager.sh
+source "${REPO_ROOT}/lib/package-manager.sh"
+pm_init
+trap 'pm_print_reboot_summary' EXIT
+
+echo "=== Vicinae AppImage Build and Installation ==="
 
 INSTALL_DIR="$HOME/.local/bin"
 APPIMAGE_PATH="$INSTALL_DIR/Vicinae.AppImage"
 
 if [ -f "$APPIMAGE_PATH" ]; then
   echo "Vicinae AppImage already exists at $APPIMAGE_PATH"
-  read -p "Do you want to rebuild and reinstall? (y/N) " -n 1 -r
+  read -r -p "Do you want to rebuild and reinstall? (y/N) " -n 1
   echo
   if [[ ! $REPLY =~ ^[Yy]$ ]]; then
     echo "Skipping Vicinae installation"
@@ -24,13 +27,9 @@ if [ -f "$APPIMAGE_PATH" ]; then
   fi
 fi
 
-# ────────────────────────────────────────────────────────────────────────────────
-# 2. Install Docker if not present
-# ────────────────────────────────────────────────────────────────────────────────
-
 if ! command -v docker >/dev/null 2>&1; then
   echo "Docker is required for AppImage build. Installing Docker..."
-  sudo dnf install -y docker
+  pm_install docker system
   sudo systemctl enable --now docker
   sudo usermod -aG docker "$USER"
   echo "Docker installed. You may need to log out and back in for group changes to take effect."
@@ -38,16 +37,8 @@ if ! command -v docker >/dev/null 2>&1; then
   exit 0
 fi
 
-# ────────────────────────────────────────────────────────────────────────────────
-# 3. Install dependencies
-# ────────────────────────────────────────────────────────────────────────────────
-
 echo "Installing required dependencies..."
-sudo dnf install -y --skip-unavailable fuse-libs git make
-
-# ────────────────────────────────────────────────────────────────────────────────
-# 4. Clone Vicinae repository
-# ────────────────────────────────────────────────────────────────────────────────
+pm_install_many system fuse-libs git make
 
 BUILD_DIR="$HOME/.local/share/vicinae-build"
 echo "Setting up build directory at $BUILD_DIR..."
@@ -62,14 +53,9 @@ else
   cd "$BUILD_DIR"
 fi
 
-# ────────────────────────────────────────────────────────────────────────────────
-# 5. Build AppImage using Docker
-# ────────────────────────────────────────────────────────────────────────────────
-
 echo "Building Vicinae AppImage using Docker..."
 echo "This will take several minutes on first build..."
 
-# Check if user is in docker group
 if ! groups | grep -q docker; then
   echo "User not in docker group yet - will use sudo for docker commands"
   echo "Note: You may be prompted for your password"
@@ -78,7 +64,6 @@ else
   USE_SUDO=false
 fi
 
-# Build the AppImage
 echo "Step 1: Setting up build environment..."
 if [ "$USE_SUDO" = true ]; then
   sudo make appimage-build-env-run || {
@@ -105,13 +90,8 @@ fi
 
 echo "Build completed successfully"
 
-# ────────────────────────────────────────────────────────────────────────────────
-# 6. Install AppImage to ~/.local/bin
-# ────────────────────────────────────────────────────────────────────────────────
-
 echo "Installing Vicinae AppImage..."
 
-# Find the built AppImage
 BUILT_APPIMAGE=$(find "$BUILD_DIR" -name "Vicinae-*.AppImage" -type f | head -n 1)
 
 if [ -z "$BUILT_APPIMAGE" ]; then
@@ -119,30 +99,21 @@ if [ -z "$BUILT_APPIMAGE" ]; then
   exit 1
 fi
 
-# Create install directory if it doesn't exist
 mkdir -p "$INSTALL_DIR"
-
-# Copy and rename AppImage
 cp "$BUILT_APPIMAGE" "$APPIMAGE_PATH"
 chmod +x "$APPIMAGE_PATH"
 
-# Create a launcher script for easier access
-cat >"$INSTALL_DIR/vicinae" <<'EOF'
+cat >"$INSTALL_DIR/vicinae" <<'WRAP'
 #!/bin/bash
 exec "$HOME/.local/bin/Vicinae.AppImage" "$@"
-EOF
+WRAP
 chmod +x "$INSTALL_DIR/vicinae"
 
 echo "Vicinae AppImage installed to $APPIMAGE_PATH"
 
-# ────────────────────────────────────────────────────────────────────────────────
-# 7. Ensure ~/.local/bin is in PATH
-# ────────────────────────────────────────────────────────────────────────────────
-
 if [[ ":$PATH:" != *":$HOME/.local/bin:"* ]]; then
   echo "Adding ~/.local/bin to PATH..."
 
-  # Detect shell profile
   if [ -f ~/.zshrc ]; then
     PROFILE=~/.zshrc
   elif [ -f ~/.bashrc ]; then
@@ -158,7 +129,8 @@ if [[ ":$PATH:" != *":$HOME/.local/bin:"* ]]; then
   echo "Added to $PROFILE - please restart your shell or run: source $PROFILE"
 fi
 
-echo -e "\n=== Vicinae Installation Complete! ==="
+echo
+echo "=== Vicinae Installation Complete! ==="
 echo "You can now run 'vicinae' from your terminal"
 echo "AppImage location: $APPIMAGE_PATH"
 echo "Tip: Set up a keyboard shortcut to launch Vicinae for quick access"

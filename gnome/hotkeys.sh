@@ -1,59 +1,103 @@
-#!/bin/bash
+# Sets up keyd and super keybindings
+# Set applications launcher to Super + Shift + a
+gsettings set org.gnome.shell.keybindings toggle-application-view "['<Super><Shift>a']"
+# Remove notifications tray binding entierly
+gsettings set org.gnome.shell.keybindings toggle-message-tray "[]"
 
-echo "Configuring macOS-like keyboard shortcuts..."
+set -euo pipefail
 
-# Reset any Alt/Super key swapping (Mac keyboards work correctly by default)
-# Command key (next to spacebar) = Super, Option key = Alt
-echo "Ensuring default Mac keyboard layout (Command=Super, Option=Alt)..."
-gsettings set org.gnome.desktop.input-sources xkb-options "[]"
+# Install keyd from source, write your config, enable + start the daemon.
+# Usage:
+#   ./setup-keyd-from-source.sh
+#
+# Optional env vars:
+#   KEYD_DIR=/path/to/clone (default: /tmp/keyd)
+#   KEYD_REF=branch|tag|commit (default: master)
 
-# Set up custom keybindings for copy/paste/cut with Super key
-# GNOME uses custom keybindings in the format /org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/customN/
+KEYD_DIR="~/.local/bin/keyd"
+KEYD_REF="${KEYD_REF:-master}"
+CONFIG_PATH="/etc/keyd/default.conf"
 
-echo "Setting up Super+C, Super+V, Super+X shortcuts..."
+CONFIG='
+[ids]
+*
 
-# First, get existing custom keybindings
-EXISTING_BINDINGS=$(gsettings get org.gnome.settings-daemon.plugins.media-keys custom-keybindings)
+[alt]
+c = C-c
+v = C-v
+'
 
-# Define our custom keybindings
-# Note: We'll use ydotool to send Ctrl+C/V/X when Super+C/V/X is pressed (Wayland-compatible)
-# First, install ydotool if not present
-if ! command -v ydotool &> /dev/null; then
-    echo "Installing ydotool for key remapping (Wayland-compatible)..."
-    sudo dnf install -y ydotool
+need_root_for_install() {
+  if [[ "${EUID:-$(id -u)}" -ne 0 ]]; then
+    echo "This script will use sudo for install/service/config steps."
+  fi
+}
 
-    # Enable and start ydotoold service
-    echo "Setting up ydotool daemon..."
-    sudo systemctl enable ydotool
-    sudo systemctl start ydotool
+ensure_deps_hint() {
+  # Minimal hints only; actual deps vary by distro.
+  if ! command -v git >/dev/null 2>&1; then
+    echo "Missing dependency: git"
+    echo "Install git and re-run."
+    exit 1
+  fi
+  if ! command -v make >/dev/null 2>&1; then
+    echo "Missing dependency: make"
+    echo "Install build tools (make, compiler toolchain) and re-run."
+    exit 1
+  fi
+}
 
-    # Add current user to input group for ydotool access
-    sudo usermod -aG input $USER
-    echo "Added $USER to input group (may need to log out and back in)"
-fi
+clone_or_update() {
+  if [[ -d "$KEYD_DIR/.git" ]]; then
+    echo "Updating existing repo at $KEYD_DIR"
+    git -C "$KEYD_DIR" fetch --all --tags
+  else
+    echo "Cloning keyd into $KEYD_DIR"
+    rm -rf "$KEYD_DIR"
+    git clone https://github.com/rvaiya/keyd "$KEYD_DIR"
+  fi
 
-# Set custom keybindings array
-gsettings set org.gnome.settings-daemon.plugins.media-keys custom-keybindings "['/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom0/', '/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom1/', '/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom2/']"
+  echo "Checking out $KEYD_REF"
+  git -C "$KEYD_DIR" checkout "$KEYD_REF" >/dev/null 2>&1 || git -C "$KEYD_DIR" checkout -B "$KEYD_REF" "origin/$KEYD_REF"
+}
 
-# Super+C for Copy (translates to Ctrl+C)
-gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom0/ name 'Copy'
-gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom0/ command 'ydotool key 29:1 46:1 46:0 29:0'
-gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom0/ binding '<Super>c'
+build_and_install() {
+  echo "Building keyd..."
+  make -C "$KEYD_DIR"
 
-# Super+V for Paste (translates to Ctrl+V)
-gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom1/ name 'Paste'
-gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom1/ command 'ydotool key 29:1 47:1 47:0 29:0'
-gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom1/ binding '<Super>v'
+  echo "Installing keyd (sudo make install)..."
+  sudo make -C "$KEYD_DIR" install
+}
 
-# Super+X for Cut (translates to Ctrl+X)
-gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom2/ name 'Cut'
-gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom2/ command 'ydotool key 29:1 45:1 45:0 29:0'
-gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom2/ binding '<Super>x'
+write_config() {
+  echo "Writing config to $CONFIG_PATH"
+  sudo install -d -m 0755 /etc/keyd
+  printf "%s\n" "$CONFIG" | sudo tee "$CONFIG_PATH" >/dev/null
+  sudo chmod 0644 "$CONFIG_PATH"
+}
 
-echo "✓ Keyboard shortcuts configured!"
-echo "✓ Mac keyboard layout preserved (Command=Super, Option=Alt)"
-echo "✓ Super+C = Copy (Command+C)"
-echo "✓ Super+V = Paste (Command+V)"
-echo "✓ Super+X = Cut (Command+X)"
-echo ""
-echo "Note: You may need to log out and back in for all changes to take effect."
+enable_start_service() {
+  # keyd installs a unit file; this enables and starts it.
+  echo "Enabling and starting keyd..."
+  sudo systemctl enable --now keyd
+
+  echo "Restarting keyd to load config..."
+  sudo systemctl restart keyd
+
+  echo
+  echo "Keyd status:"
+  sudo systemctl --no-pager --full status keyd || true
+}
+
+main() {
+  need_root_for_install
+  ensure_deps_hint
+  clone_or_update
+  build_and_install
+  write_config
+  enable_start_service
+  echo
+  echo "Done. Try RIGHT Super + C/V/X."
+}
+
+main "$@"

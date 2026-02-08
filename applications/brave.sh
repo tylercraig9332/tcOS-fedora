@@ -1,99 +1,70 @@
+#!/usr/bin/env bash
 # Install Brave Browser
 
 set -euo pipefail
 
-# ────────────────────────────────────────────────
-# Detect architecture
-# ────────────────────────────────────────────────
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(dirname "$SCRIPT_DIR")"
+
+# shellcheck source=../lib/package-manager.sh
+source "${REPO_ROOT}/lib/package-manager.sh"
+pm_init
+trap 'pm_print_reboot_summary' EXIT
+
 ARCH=$(uname -m)
 
 echo "========================================"
 echo "   Installing Brave Browser            "
 echo "        Architecture: $ARCH            "
 echo "========================================"
-echo ""
+echo
 
-# ────────────────────────────────────────────────
-# Supported Architectures
-# ────────────────────────────────────────────────
 if [ "$ARCH" != "x86_64" ] && [ "$ARCH" != "aarch64" ]; then
   echo "ERROR: Unsupported architecture: $ARCH"
-  echo "Brave Browser supports x86_64 and aarch64 only."
   exit 1
 fi
 
-# Check if Brave already installed
-if command -v brave-browser >/dev/null 2>&1; then
-  echo "→ Brave Browser already installed: $(brave-browser --version)"
-  echo ""
-  echo "========================================"
-  echo " Brave Browser is already installed! ✓"
-  echo "========================================"
-  exit 0
-fi
+pm_pre_os_install_brave() {
+  echo "Installing Brave Browser signing key..."
+  sudo rpm --import https://brave-browser-rpm-release.s3.brave.com/brave-core.asc
 
-echo "→ Brave Browser not found, proceeding with installation..."
-echo ""
-
-# ────────────────────────────────────────────────
-# Install Brave Repository and Browser
-# ────────────────────────────────────────────────
-
-echo "→ Installing Brave Browser signing key..."
-sudo rpm --import https://brave-browser-rpm-release.s3.brave.com/brave-core.asc
-
-echo ""
-echo "→ Adding Brave Browser DNF repository..."
-sudo tee /etc/yum.repos.d/brave-browser.repo > /dev/null <<EOF
+  local repo_contents
+  repo_contents=$(cat <<'REPO'
 [brave-browser]
 name=Brave Browser
-baseurl=https://brave-browser-rpm-release.s3.brave.com/\$basearch
+baseurl=https://brave-browser-rpm-release.s3.brave.com/$basearch
 enabled=1
 gpgcheck=1
 gpgkey=https://brave-browser-rpm-release.s3.brave.com/brave-core.asc
-EOF
+REPO
+)
 
-echo ""
-echo "→ Installing Brave Browser..."
-sudo dnf install -y brave-browser
+  pm_add_rpm_repo "brave-browser" "/etc/yum.repos.d/brave-browser.repo" "$repo_contents"
+}
 
-echo ""
-echo "✓ Brave Browser installed successfully!"
+if command -v brave-browser >/dev/null 2>&1; then
+  echo "Brave Browser already installed: $(brave-browser --version)"
+else
+  pm_install brave gui
+fi
 
-# Verify installation
-echo ""
-echo "→ Verifying Brave installation..."
-brave-browser --version
-
-# ────────────────────────────────────────────────
-# Restore profile (bookmarks + extensions)
-# ────────────────────────────────────────────────
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO_ROOT="$(dirname "$SCRIPT_DIR")"
-
-echo ""
-echo "→ Restoring browser profile configuration..."
+echo
+echo "Restoring browser profile configuration..."
 source "${REPO_ROOT}/lib/restore-chromium-profile.sh"
-restore_chromium_profile "$HOME/.config/BraveSoftware/Brave-Browser" "brave-browser"
 
-# Final instructions
-echo ""
+if command -v brave-browser >/dev/null 2>&1; then
+  restore_chromium_profile "$HOME/.config/BraveSoftware/Brave-Browser" "brave-browser"
+  brave-browser --version || true
+elif flatpak info com.brave.Browser >/dev/null 2>&1; then
+  restore_chromium_profile "$HOME/.var/app/com.brave.Browser/config/BraveSoftware/Brave-Browser" "flatpak run com.brave.Browser"
+  flatpak info com.brave.Browser | grep -E "ID|Version|Branch" || true
+elif [[ "$PM_HOST_KIND" == "atomic" && "$PM_LAST_INSTALL_PENDING_REBOOT" -eq 1 ]]; then
+  echo "Brave was layered with rpm-ostree and will be available after reboot."
+else
+  echo "Warning: Brave binary not detected after install attempt."
+fi
+
+echo
 echo "========================================"
-echo " Brave Browser installed! ✓"
-echo ""
-echo "Next steps for extensions:"
-echo "  1. Brave should open with extension pages"
-echo "  2. Click 'Add to Chrome' for each extension"
-echo "  3. Sign in to your accounts as needed"
-echo ""
-echo "Features:"
-echo "  • Built-in ad and tracker blocking"
-echo "  • Privacy-focused by default"
-echo "  • Chrome extension compatible"
-echo "  • Brave Rewards (optional)"
-echo ""
-echo "Bookmarks: Restored from configs/chromium-bookmarks.json"
-echo "Extensions: Listed in configs/chromium-extensions.txt"
-echo ""
-echo "Updates: Managed via Brave's DNF repository"
+echo " Brave Browser installation complete"
 echo "========================================"

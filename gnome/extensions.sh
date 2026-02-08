@@ -1,32 +1,34 @@
-# Sets up Gnome Extensions
-flatpak install -y flathub com.mattjakeman.ExtensionManager
+#!/usr/bin/env bash
+# Sets up GNOME Extensions
 
-# Ensure user extensions are allowed
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(dirname "$SCRIPT_DIR")"
+
+# shellcheck source=../lib/package-manager.sh
+source "${REPO_ROOT}/lib/package-manager.sh"
+pm_init
+trap 'pm_print_reboot_summary' EXIT
+
+pm_install extension-manager gui
+
 gsettings set org.gnome.shell disable-user-extensions false
 
-# Install pipx if not already installed
-if ! command -v pipx &> /dev/null; then
-    echo "Installing pipx..."
-    sudo dnf install -y pipx
-    pipx ensurepath
+if ! command -v pipx >/dev/null 2>&1; then
+  echo "Installing pipx..."
+  pm_install pipx cli
+  pipx ensurepath
 fi
 
-# Install gext CLI tool for managing GNOME extensions
-if ! command -v gext &> /dev/null; then
-    echo "Installing gext (GNOME Extensions CLI)..."
-    pipx install gnome-extensions-cli --system-site-packages
+if ! command -v gext >/dev/null 2>&1; then
+  echo "Installing gext (GNOME Extensions CLI)..."
+  pipx install gnome-extensions-cli --system-site-packages
 fi
 
-# Install GNOME Extensions
 echo "Installing GNOME extensions..."
-
-# GsConnect (KDE Connect for GNOME)
 gext install gsconnect@andyholmes.github.io
-
-# Blur My Shell
 gext install blur-my-shell@aunetx
-
-# Hot Edge
 gext install hotedge@jonathan.jdoda.ca
 
 echo "Extensions installed: GsConnect, Blur My Shell, Hot Edge"
