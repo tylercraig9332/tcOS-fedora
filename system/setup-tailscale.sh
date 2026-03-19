@@ -33,8 +33,6 @@ REPO
 
 if command -v tailscale >/dev/null 2>&1; then
   echo "Tailscale is already installed ($(tailscale version))"
-  echo "Checking status..."
-  sudo tailscale status || true
 else
   echo "Installing Tailscale..."
   pm_install tailscale cli
@@ -42,6 +40,17 @@ else
   echo "Enabling and starting Tailscale service..."
   sudo systemctl enable --now tailscaled
 fi
+
+tailscaled_enabled="$(systemctl is-enabled tailscaled 2>/dev/null || true)"
+tailscaled_active="$(systemctl is-active tailscaled 2>/dev/null || true)"
+
+if [[ "$tailscaled_enabled" != "enabled" || "$tailscaled_active" != "active" ]]; then
+  echo "Enabling and starting Tailscale service..."
+  sudo systemctl enable --now tailscaled
+fi
+
+echo "Checking status..."
+sudo tailscale status || true
 
 if sudo tailscale status >/dev/null 2>&1; then
   echo
